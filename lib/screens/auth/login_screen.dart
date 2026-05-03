@@ -33,9 +33,10 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _isLoading = false;
       });
+      String fullNumber = '+${_selectedCountry.phoneCode}${_phoneController.text}';
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => HomeScreen(phoneNumber: fullNumber)),
         (route) => false,
       );
     }

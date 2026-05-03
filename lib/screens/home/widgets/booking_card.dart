@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'date_time_picker.dart';
 
-class BookingCard extends StatelessWidget {
+class BookingCard extends StatefulWidget {
   final bool isOneWay;
   final Function(bool) onToggle;
 
@@ -11,6 +11,16 @@ class BookingCard extends StatelessWidget {
     required this.isOneWay,
     required this.onToggle,
   });
+
+  @override
+  State<BookingCard> createState() => _BookingCardState();
+}
+
+class _BookingCardState extends State<BookingCard> {
+  String startDate = 'Sun May 03';
+  String startTime = '07:00 AM';
+  String endDate = 'Mon May 04';
+  String endTime = '07:00 PM'; // Valid time format
 
   @override
   Widget build(BuildContext context) {
@@ -71,10 +81,10 @@ class BookingCard extends StatelessWidget {
   }
 
   Widget _buildToggleButton(bool value, String title, String subText) {
-    bool isSelected = isOneWay == value;
+    bool isSelected = widget.isOneWay == value;
     return Expanded(
       child: GestureDetector(
-        onTap: () => onToggle(value),
+        onTap: () => widget.onToggle(value),
         child: Container(
           decoration: BoxDecoration(
             color: isSelected ? Colors.blue : Colors.white,
@@ -199,20 +209,36 @@ class BookingCard extends StatelessWidget {
           child: _buildTripDateInput(
             context,
             'TRIP START',
-            '03-05-2026',
-            '07:00 AM',
+            startDate,
+            startTime,
             Icons.calendar_today_outlined,
+            (res) {
+              if (res != null) {
+                setState(() {
+                  startDate = res['date'];
+                  startTime = res['time'];
+                });
+              }
+            },
           ),
         ),
-        if (!isOneWay) ...[
+        if (!widget.isOneWay) ...[
           const SizedBox(width: 12),
           Expanded(
             child: _buildTripDateInput(
               context,
               'TRIP END',
-              '04-05-2026',
-              'Monday',
+              endDate,
+              endTime,
               Icons.calendar_today_outlined,
+              (res) {
+                if (res != null) {
+                  setState(() {
+                    endDate = res['date'];
+                    endTime = res['time'];
+                  });
+                }
+              },
             ),
           ),
         ],
@@ -220,20 +246,32 @@ class BookingCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTripDateInput(BuildContext context, String label, String date, String subText, IconData icon) {
+  Widget _buildTripDateInput(
+    BuildContext context,
+    String label,
+    String date,
+    String subText,
+    IconData icon,
+    Function(Map<String, dynamic>?) onResult,
+  ) {
     return GestureDetector(
-      onTap: () {
-        showDialog(
+      onTap: () async {
+        final result = await showDialog<Map<String, dynamic>>(
           context: context,
-          builder: (context) => DateTimePickerDialog(label: label),
+          builder: (context) => DateTimePickerDialog(
+            label: label,
+            initialDate: date,
+            initialTime: subText.contains('M') ? subText : '12:00 PM',
+          ),
         );
+        onResult(result);
       },
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.cyan.shade100),
+          border: Border.all(color: Colors.blue.shade100),
           borderRadius: BorderRadius.circular(8),
-          color: Colors.cyan.withOpacity(0.02),
+          color: Colors.blue.withOpacity(0.02),
         ),
         child: Row(
           children: [

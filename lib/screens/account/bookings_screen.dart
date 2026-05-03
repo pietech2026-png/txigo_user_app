@@ -1,0 +1,301 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class BookingsScreen extends StatefulWidget {
+  const BookingsScreen({super.key});
+
+  @override
+  State<BookingsScreen> createState() => _BookingsScreenState();
+}
+
+class _BookingsScreenState extends State<BookingsScreen> {
+  int _selectedTab = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Bookings',
+          style: GoogleFonts.outfit(
+            color: Colors.black,
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          // Background Decorative Footer
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Image.asset(
+              'assets/images/mandala_footer.png',
+              fit: BoxFit.cover,
+              color: Colors.grey.withOpacity(0.05),
+              colorBlendMode: BlendMode.dstIn,
+            ),
+          ),
+          // Content
+          Positioned.fill(
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                // Custom Tab Bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      children: [
+                        _buildTab(0, 'Upcoming'),
+                        _buildTab(1, 'Current'),
+                        _buildTab(2, 'History'),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: _selectedTab == 0 ? _buildUpcomingContent() : _buildEmptyState(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpcomingContent() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildBookingCard(
+          crn: 'CRN984210543',
+          from: 'Delhi (DEL)',
+          to: 'Jaipur (JAI)',
+          date: '15 May, 2026',
+          time: '07:00 AM',
+          status: 'Confirmed',
+          cabType: 'Sedan (Swift Dezire)',
+          price: '₹2,450',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            'assets/images/empty_bookings.png',
+            height: 280,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            "No active bookings found",
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBookingCard({
+    required String crn,
+    required String from,
+    required String to,
+    required String date,
+    required String time,
+    required String status,
+    required String cabType,
+    required String price,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // CRN and Status
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.03),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  crn,
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.blue.shade800),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Text(
+                    status,
+                    style: GoogleFonts.outfit(color: Colors.green.shade700, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Route Details
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Column(
+                      children: [
+                        const Icon(Icons.circle, size: 10, color: Colors.blue),
+                        Container(height: 30, width: 2, color: Colors.grey.shade300),
+                        const Icon(Icons.location_on, size: 14, color: Colors.orange),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(from, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 24),
+                          Text(to, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(date, style: GoogleFonts.outfit(color: Colors.grey, fontSize: 13)),
+                        const SizedBox(height: 4),
+                        Text(time, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
+                      ],
+                    ),
+                  ],
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Divider(),
+                ),
+                // Cab and Price
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.directions_car_filled_outlined, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Text(cabType, style: GoogleFonts.outfit(color: Colors.black87)),
+                      ],
+                    ),
+                    Text(
+                      price,
+                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                // Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {},
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.blue.shade400),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: Text(
+                          'View Details',
+                          style: GoogleFonts.outfit(color: Colors.blue.shade400, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade400,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: Text(
+                          'Support',
+                          style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTab(int index, String label) {
+    bool isSelected = _selectedTab == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedTab = index),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.blue.shade400 : Colors.white,
+            borderRadius: BorderRadius.circular(isSelected ? 6 : 0),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: GoogleFonts.outfit(
+              color: isSelected ? Colors.white : Colors.grey.shade600,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

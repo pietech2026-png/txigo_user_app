@@ -1,10 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'date_time_picker.dart';
 
-class PackageBookingDialog extends StatelessWidget {
+class PackageBookingDialog extends StatefulWidget {
   final String packageName;
 
   const PackageBookingDialog({super.key, required this.packageName});
+
+  @override
+  State<PackageBookingDialog> createState() => _PackageBookingDialogState();
+}
+
+class _PackageBookingDialogState extends State<PackageBookingDialog> {
+  String startDate = 'Sun May 03';
+  String startTime = '03:00 PM';
+  String endDate = 'Wed May 06';
+  String endTime = '07:00 PM';
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +41,7 @@ class PackageBookingDialog extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: Text(
-                        packageName,
+                        widget.packageName,
                         style: GoogleFonts.outfit(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -53,11 +64,25 @@ class PackageBookingDialog extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildDateField('TRIP START', '03-05-2026', '03:00 PM'),
+                      child: _buildDateField(context, 'TRIP START', startDate, startTime, (res) {
+                        if (res != null) {
+                          setState(() {
+                            startDate = res['date'];
+                            startTime = res['time'];
+                          });
+                        }
+                      }),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _buildDateField('TRIP END', '06-05-2026', 'Wednesday'),
+                      child: _buildDateField(context, 'TRIP END', endDate, endTime, (res) {
+                        if (res != null) {
+                          setState(() {
+                            endDate = res['date'];
+                            endTime = res['time'];
+                          });
+                        }
+                      }),
                     ),
                   ],
                 ),
@@ -134,39 +159,52 @@ class PackageBookingDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildDateField(String label, String date, String subText) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.02),
-        border: Border.all(color: Colors.blue.shade100),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.calendar_today_outlined, color: Colors.cyan.shade400, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  date,
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-                Text(
-                  subText,
-                  style: GoogleFonts.outfit(color: Colors.grey, fontSize: 11),
-                ),
-              ],
-            ),
+  Widget _buildDateField(BuildContext context, String label, String date, String subText, Function(Map<String, dynamic>?) onResult) {
+    return GestureDetector(
+      onTap: () async {
+        final result = await showDialog<Map<String, dynamic>>(
+          context: context,
+          builder: (context) => DateTimePickerDialog(
+            label: label,
+            initialDate: date,
+            initialTime: subText.contains('M') ? subText : '12:00 PM',
           ),
-          const Icon(Icons.chevron_right, color: Colors.grey, size: 16),
-        ],
+        );
+        onResult(result);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.blue.withOpacity(0.02),
+          border: Border.all(color: Colors.blue.shade100),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.calendar_today_outlined, color: Colors.cyan.shade400, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    date,
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  Text(
+                    subText,
+                    style: GoogleFonts.outfit(color: Colors.grey, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.grey, size: 16),
+          ],
+        ),
       ),
     );
   }
