@@ -68,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           children: [
             _buildBookingCard(),
-            const PetCabBanner(),
+            PetCabBanner(phoneNumber: widget.phoneNumber),
             const BannersSection(),
             const ExpertSection(),
           ],
@@ -100,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return BookingCard(
           isOneWay: _isOneWay,
           onToggle: (val) => setState(() => _isOneWay = val),
+          phoneNumber: widget.phoneNumber,
         );
     }
   }

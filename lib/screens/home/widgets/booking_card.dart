@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'date_time_picker.dart';
+import '../../../widgets/city_autocomplete_field.dart';
+import '../../../data/cities.dart';
+import '../../booking/cab_selection_screen.dart';
 
 class BookingCard extends StatefulWidget {
   final bool isOneWay;
   final Function(bool) onToggle;
+  final String phoneNumber;
 
   const BookingCard({
     super.key,
     required this.isOneWay,
     required this.onToggle,
+    required this.phoneNumber,
   });
 
   @override
@@ -17,10 +22,19 @@ class BookingCard extends StatefulWidget {
 }
 
 class _BookingCardState extends State<BookingCard> {
+  final TextEditingController _fromController = TextEditingController(text: 'New Delhi');
+  final TextEditingController _toController = TextEditingController(text: 'Jaipur');
   String startDate = 'Sun May 03';
   String startTime = '07:00 AM';
   String endDate = 'Mon May 04';
-  String endTime = '07:00 PM'; // Valid time format
+  String endTime = '07:00 PM';
+
+  @override
+  void dispose() {
+    _fromController.dispose();
+    _toController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -121,54 +135,41 @@ class _BookingCardState extends State<BookingCard> {
       children: [
         Column(
           children: [
-            _buildLocationInput(Icons.location_on_outlined, 'FROM', 'Enter pickup city'),
+            CityAutocompleteField(
+              label: 'FROM',
+              hint: 'Enter pickup city',
+              icon: Icons.location_on_outlined,
+              controller: _fromController,
+            ),
             const SizedBox(height: 12),
-            _buildLocationInput(Icons.location_on_outlined, 'TO', 'Enter drop city'),
+            CityAutocompleteField(
+              label: 'TO',
+              hint: 'Enter drop city',
+              icon: Icons.location_on_outlined,
+              controller: _toController,
+            ),
           ],
         ),
         Padding(
-          padding: const EdgeInsets.only(right: 8.0),
-          child: Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.blue.shade200),
+          padding: const EdgeInsets.only(right: 8.0, bottom: 20),
+          child: GestureDetector(
+            onTap: () {
+              String temp = _fromController.text;
+              _fromController.text = _toController.text;
+              _toController.text = temp;
+            },
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Icon(Icons.swap_vert, color: Colors.blue.shade400),
             ),
-            child: Icon(Icons.swap_vert, color: Colors.blue.shade400),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildLocationInput(IconData icon, String label, String hint) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.02),
-        border: Border.all(color: Colors.blue.shade100),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.grey, size: 20),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                hint,
-                style: GoogleFonts.outfit(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 
@@ -308,7 +309,21 @@ class _BookingCardState extends State<BookingCard> {
       width: double.infinity,
       height: 54,
       child: ElevatedButton(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CabSelectionScreen(
+                from: _fromController.text,
+                to: _toController.text,
+                date: startDate,
+                time: startTime,
+                isOneWay: widget.isOneWay,
+                phoneNumber: widget.phoneNumber,
+              ),
+            ),
+          );
+        },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.orange.shade700,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
