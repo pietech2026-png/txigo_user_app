@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../home/widgets/date_time_picker.dart';
 import 'booking_review_screen.dart';
+import 'cab_selection_screen.dart';
 import '../../widgets/city_autocomplete_field.dart';
 import '../../data/cities.dart';
 
@@ -17,8 +19,8 @@ class _PetCabScreenState extends State<PetCabScreen> {
   final TextEditingController _fromController = TextEditingController();
   final TextEditingController _toController = TextEditingController();
   String _selectedPet = 'Dog';
-  String startDate = 'Select Date';
-  String startTime = 'Select Time';
+  String startDate = DateFormat('E MMM dd').format(DateTime.now());
+  String startTime = DateFormat('hh:mm a').format(DateTime.now());
 
   @override
   Widget build(BuildContext context) {
@@ -106,14 +108,14 @@ class _PetCabScreenState extends State<PetCabScreen> {
         children: [
           CityAutocompleteField(
             label: 'From',
-            hint: 'Pickup City',
+            hint: 'Enter the City',
             icon: Icons.location_on_outlined,
             controller: _fromController,
           ),
           const SizedBox(height: 16),
           CityAutocompleteField(
             label: 'To',
-            hint: 'Destination City',
+            hint: 'Enter the City',
             icon: Icons.location_on,
             controller: _toController,
           ),
@@ -286,15 +288,14 @@ class _PetCabScreenState extends State<PetCabScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => BookingReviewScreen(
+              builder: (context) => CabSelectionScreen(
                 from: _fromController.text,
                 to: _toController.text,
                 date: startDate,
                 time: startTime,
                 isOneWay: true,
-                carName: 'Pet Friendly Sedan (${_selectedPet})',
-                price: '₹ 3243',
                 phoneNumber: widget.phoneNumber,
+                petType: _selectedPet,
               ),
             ),
           );

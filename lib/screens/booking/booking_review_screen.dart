@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../data/services/booking_service.dart';
+import '../../data/models/booking.dart';
+import '../home/home_screen.dart';
 
 class BookingReviewScreen extends StatefulWidget {
   final String from;
@@ -99,6 +102,8 @@ class _BookingReviewScreenState extends State<BookingReviewScreen> {
 
   double get _finalPrice => (_basePrice + _addonsTotal) - _discount;
 
+  bool _isCreatingBooking = false;
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -107,6 +112,71 @@ class _BookingReviewScreenState extends State<BookingReviewScreen> {
     _dropLocationController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleConfirmBooking() async {
+    if (_nameController.text.isEmpty || _pickupLocationController.text.isEmpty || _dropLocationController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isCreatingBooking = true;
+    });
+
+    final booking = Booking(
+      customerName: _nameController.text,
+      customerMobile: widget.phoneNumber,
+      customerEmail: _emailController.text,
+      serviceType: widget.isOneWay ? 'Outstation oneway' : 'Outstation roundtrip',
+      state: 'Default', // Ideally should be fetched or passed
+      pickupAddress: _pickupLocationController.text,
+      dropAddress: _dropLocationController.text,
+      pickupDate: widget.date,
+      pickupTime: widget.time,
+      vehicleCategory: widget.carName,
+      seater: 4, // Default or parse from carName
+      fare: _finalPrice,
+      advance: _finalPrice * 0.25,
+      dueFare: _finalPrice * 0.75,
+    );
+
+    final result = await BookingService.createBooking(booking);
+
+    if (mounted) {
+      setState(() {
+        _isCreatingBooking = false;
+      });
+
+      if (result != null) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('Booking Confirmed!'),
+            content: Text('Your booking ID is ${result.bookingId}. We have received your request.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => HomeScreen(phoneNumber: widget.phoneNumber)),
+                    (route) => false,
+                  );
+                },
+                child: const Text('Go to Home'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to confirm booking. Please try again.')),
+        );
+      }
+    }
   }
 
   @override
@@ -520,8 +590,19 @@ class _BookingReviewScreenState extends State<BookingReviewScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text('INCLUSIONS', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green)),
+              const SizedBox(height: 8),
+              _buildInclusionPoint(Icons.check_circle, 'Fuel Charges', true),
               _buildInclusionPoint(Icons.check_circle, 'Driver Allowance', true),
-              _buildInclusionPoint(Icons.check_circle, 'One way toll / state tax', true),
+              if (!widget.isOneWay) ...[
+                _buildInclusionPoint(Icons.check_circle, 'Driver Driving Allowance', true),
+                _buildInclusionPoint(Icons.check_circle, 'Hour Charges', true),
+              ],
+              const Divider(height: 24),
+              Text('EXCLUSIONS', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red)),
+              const SizedBox(height: 8),
+              _buildInclusionPoint(Icons.cancel, 'Toll / State Tax', false),
+              _buildInclusionPoint(Icons.cancel, 'GST (5%)', false),
               _buildInclusionPoint(Icons.cancel, 'Parking Charges', false),
               const Divider(height: 32),
               Text(
@@ -598,19 +679,23 @@ class _BookingReviewScreenState extends State<BookingReviewScreen> {
                 child: SizedBox(
                   height: 54,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: _isCreatingBooking ? null : _handleConfirmBooking,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange.shade700,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       elevation: 0,
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Pay Now', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                        Text('₹ ${(_finalPrice * 0.25).toStringAsFixed(0)}', style: GoogleFonts.outfit(color: Colors.white, fontSize: 14)),
-                      ],
-                    ),
+                    child: _isCreatingBooking
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text('Pay Now',
+                                  style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                              Text('₹ ${(_finalPrice * 0.25).toStringAsFixed(0)}',
+                                  style: GoogleFonts.outfit(color: Colors.white, fontSize: 14)),
+                            ],
+                          ),
                   ),
                 ),
               ),

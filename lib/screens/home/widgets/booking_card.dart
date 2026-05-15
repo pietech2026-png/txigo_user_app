@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'date_time_picker.dart';
 import '../../../widgets/city_autocomplete_field.dart';
 import '../../../data/cities.dart';
@@ -22,12 +23,12 @@ class BookingCard extends StatefulWidget {
 }
 
 class _BookingCardState extends State<BookingCard> {
-  final TextEditingController _fromController = TextEditingController(text: 'New Delhi');
-  final TextEditingController _toController = TextEditingController(text: 'Jaipur');
-  String startDate = 'Sun May 03';
-  String startTime = '07:00 AM';
-  String endDate = 'Mon May 04';
-  String endTime = '07:00 PM';
+  final TextEditingController _fromController = TextEditingController();
+  final TextEditingController _toController = TextEditingController();
+  String startDate = DateFormat('E MMM dd').format(DateTime.now());
+  String startTime = DateFormat('hh:mm a').format(DateTime.now());
+  String endDate = DateFormat('E MMM dd').format(DateTime.now().add(const Duration(days: 1)));
+  String endTime = DateFormat('hh:mm a').format(DateTime.now());
 
   @override
   void dispose() {
@@ -137,14 +138,14 @@ class _BookingCardState extends State<BookingCard> {
           children: [
             CityAutocompleteField(
               label: 'FROM',
-              hint: 'Enter pickup city',
+              hint: 'Enter the City',
               icon: Icons.location_on_outlined,
               controller: _fromController,
             ),
             const SizedBox(height: 12),
             CityAutocompleteField(
               label: 'TO',
-              hint: 'Enter drop city',
+              hint: 'Enter the City',
               icon: Icons.location_on_outlined,
               controller: _toController,
             ),
@@ -310,6 +311,12 @@ class _BookingCardState extends State<BookingCard> {
       height: 54,
       child: ElevatedButton(
         onPressed: () {
+          if (_fromController.text.isEmpty || _toController.text.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Please enter both pickup and destination cities')),
+            );
+            return;
+          }
           Navigator.push(
             context,
             MaterialPageRoute(

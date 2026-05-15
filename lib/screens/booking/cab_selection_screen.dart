@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'booking_review_screen.dart';
+import '../../data/services/car_service.dart';
+import '../../data/models/car_category.dart';
 
 class CabSelectionScreen extends StatefulWidget {
   final String from;
@@ -9,6 +11,7 @@ class CabSelectionScreen extends StatefulWidget {
   final String time;
   final bool isOneWay;
   final String phoneNumber;
+  final String? petType;
 
   const CabSelectionScreen({
     super.key,
@@ -18,6 +21,7 @@ class CabSelectionScreen extends StatefulWidget {
     required this.time,
     required this.isOneWay,
     required this.phoneNumber,
+    this.petType,
   });
 
   @override
@@ -25,21 +29,47 @@ class CabSelectionScreen extends StatefulWidget {
 }
 
 class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTickerProviderStateMixin {
-  int _selectedCarIndex = 1; // Default to Sedan
+  int _selectedCarIndex = 0;
   late TabController _tabController;
-
-  final List<Map<String, dynamic>> carTypes = [
-    {'name': 'Hatchback', 'price': '₹ 2596', 'image': 'assets/images/cab_hatchback.png'},
-    {'name': 'Sedan', 'price': '₹ 2655', 'image': 'assets/images/cab_sedan.png'},
-    {'name': 'Ertiga', 'price': '₹ 3336', 'image': 'assets/images/cab_ertiga.png'},
-    {'name': 'Crysta', 'price': '₹ 6344', 'image': 'assets/images/cab_crysta.png'},
-    {'name': 'Innova', 'price': '₹ 7344', 'image': 'assets/images/cab_innova.png'},
-  ];
+  List<CarCategory> _carCategories = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
+    _fetchCarCategories();
+  }
+
+  Future<void> _fetchCarCategories() async {
+    final categories = await CarService.getCarCategories();
+    
+    // Sort categories based on user preference: Hatchback, SUV (Ertiga), Sedan, Luxury SUV
+    final List<String> priorityOrder = ['hatchback', 'ertiga', 'sedan', 'luxury', 'crysta'];
+    
+    categories.sort((a, b) {
+      String nameA = (a.displayName + a.name).toLowerCase();
+      String nameB = (b.displayName + b.name).toLowerCase();
+      
+      int indexA = priorityOrder.indexWhere((element) => nameA.contains(element));
+      int indexB = priorityOrder.indexWhere((element) => nameB.contains(element));
+      
+      // If not found in priority list, move to the end
+      if (indexA == -1) indexA = 99;
+      if (indexB == -1) indexB = 99;
+      
+      return indexA.compareTo(indexB);
+    });
+
+    setState(() {
+      _carCategories = categories;
+      _isLoading = false;
+    });
   }
 
   @override
@@ -116,77 +146,96 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
           ),
 
           // Car Selection List
-          SizedBox(
-            height: 120,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              itemCount: carTypes.length,
-              itemBuilder: (context, index) {
-                bool isSelected = _selectedCarIndex == index;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedCarIndex = index),
-                  child: Container(
-                    width: 90,
-                    margin: const EdgeInsets.only(right: 12),
-                    child: Column(
-                      children: [
-                        Text(
-                          carTypes[index]['name'],
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? Colors.blue : Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected ? Colors.blue : Colors.grey.shade300,
-                              width: isSelected ? 2 : 1,
+          _isLoading
+              ? const Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              : _carCategories.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Text('No car categories available'),
+                    )
+                  : SizedBox(
+                      height: 110,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        itemCount: _carCategories.length,
+                        itemBuilder: (context, index) {
+                          bool isSelected = _selectedCarIndex == index;
+                          final car = _carCategories[index];
+                          return GestureDetector(
+                            onTap: () => setState(() => _selectedCarIndex = index),
+                            child: Container(
+                              width: 90,
+                              margin: const EdgeInsets.only(right: 12),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    car.displayName,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 10,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      color: isSelected ? Colors.blue : Colors.black,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isSelected ? Colors.blue : Colors.grey.shade300,
+                                        width: isSelected ? 2 : 1,
+                                      ),
+                                    ),
+                                    child: Image.asset(
+                                      _getCarImage(car.name),
+                                      height: 40,
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          const Icon(Icons.directions_car, size: 24, color: Colors.grey),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '₹ ${car.baseFare.toInt()}',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: isSelected ? Colors.blue : Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          child: Image.asset(
-                            carTypes[index]['image'],
-                            height: 40,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.directions_car, size: 24, color: Colors.grey),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          carTypes[index]['price'],
-                          style: GoogleFonts.outfit(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: isSelected ? Colors.blue : Colors.black,
-                          ),
-                        ),
-                      ],
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-          ),
 
           // Main Car Details Card
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildMainCarCard(),
-                  const SizedBox(height: 16),
-                  _buildInfoBar(),
-                  const SizedBox(height: 16),
-                  _buildDetailsTabs(),
-                ],
-              ),
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _carCategories.isEmpty
+                    ? const Center(child: Text('No car details available'))
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        child: Column(
+                          children: [
+                            _buildMainCarCard(),
+                            const SizedBox(height: 16),
+                            _buildInfoBar(),
+                            const SizedBox(height: 16),
+                            _buildDetailsTabs(),
+                          ],
+                        ),
+                      ),
           ),
         ],
       ),
@@ -194,8 +243,9 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
   }
 
   Widget _buildMainCarCard() {
+    final car = _carCategories[_selectedCarIndex];
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -215,20 +265,22 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      carTypes[_selectedCarIndex]['name'],
+                      car.displayName,
                       style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold),
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Text('4-7 seater AC Cab ', style: GoogleFonts.outfit(color: Colors.grey, fontSize: 13, fontStyle: FontStyle.italic)),
+                        Text('${car.seater} seater AC Cab ',
+                            style: GoogleFonts.outfit(color: Colors.grey, fontSize: 13, fontStyle: FontStyle.italic)),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                           decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(4)),
                           child: Row(
                             children: [
-                              Text('4.5', style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                              Text('4.5',
+                                  style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                               const Icon(Icons.star, color: Colors.white, size: 10),
                             ],
                           ),
@@ -239,7 +291,7 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
                 ),
               ),
               Image.asset(
-                carTypes[_selectedCarIndex]['image'],
+                _getCarImage(car.name),
                 width: 150,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) => Container(
@@ -261,26 +313,33 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
                   children: [
                     Icon(Icons.percent, color: Colors.green.shade600, size: 12),
                     const SizedBox(width: 4),
-                    Text('11% OFF', style: GoogleFonts.outfit(color: Colors.green.shade600, fontWeight: FontWeight.bold, fontSize: 12)),
+                    Text('11% OFF',
+                        style: GoogleFonts.outfit(color: Colors.green.shade600, fontWeight: FontWeight.bold, fontSize: 12)),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              Text('₹ 2,983', style: GoogleFonts.outfit(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 14)),
+              Text('₹ ${(car.baseFare * 1.11).toInt()}',
+                  style: GoogleFonts.outfit(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 14)),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            carTypes[_selectedCarIndex]['price'],
+            '₹ ${car.baseFare.toInt()}',
             style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.blue.shade700),
           ),
           Text(
-            '+ ₹ 432 Charges and Taxes',
+            '+ Taxes and fees',
             style: GoogleFonts.outfit(color: Colors.grey, fontSize: 12),
           ),
           const SizedBox(height: 16),
           _buildInclusionItem(Icons.person_outline, 'Driver allowance included'),
-          _buildInclusionItem(Icons.speed, '260 kms included | Post limit: ₹ 14.25/km'),
+          _buildInclusionItem(Icons.speed, 'Base Fare includes fuel charges'),
+          if (!widget.isOneWay) ...[
+            _buildInclusionItem(Icons.timer_outlined, 'Driver driving allowance included'),
+            _buildInclusionItem(Icons.hourglass_empty_outlined, 'Hour charges included'),
+          ],
+          _buildInclusionItem(Icons.info_outline, 'Per Km Rate: ₹ ${car.perKmRate}'),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(10),
@@ -291,7 +350,7 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'New Car Promise - Model that is 2023 or newer @ ₹ 249',
+                    'Best price guaranteed for ${car.displayName}',
                     style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w500),
                   ),
                 ),
@@ -313,8 +372,10 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
                       date: widget.date,
                       time: widget.time,
                       isOneWay: widget.isOneWay,
-                      carName: carTypes[_selectedCarIndex]['name'],
-                      price: carTypes[_selectedCarIndex]['price'],
+                      carName: widget.petType != null
+                          ? 'Pet Friendly ${car.displayName} (${widget.petType})'
+                          : car.displayName,
+                      price: '₹ ${car.baseFare.toInt()}',
                       phoneNumber: widget.phoneNumber,
                     ),
                   ),
@@ -333,6 +394,17 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
         ],
       ),
     );
+  }
+
+  String _getCarImage(String category) {
+    category = category.toLowerCase();
+    if (category.contains('hatchback')) return 'assets/images/cab_hatchback.png';
+    if (category.contains('sedan')) return 'assets/images/cab_sedan.png';
+    if (category.contains('ertiga')) return 'assets/images/cab_ertiga.png';
+    if (category.contains('crysta')) return 'assets/images/cab_crysta.png';
+    if (category.contains('innova')) return 'assets/images/cab_innova.png';
+    if (category.contains('test') || category.contains('wagon')) return 'assets/images/cab_wagonr.png';
+    return 'assets/images/cab_sedan.png';
   }
 
   Widget _buildInclusionItem(IconData icon, String text) {
@@ -418,16 +490,46 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
-              children: [
-                _buildTabDetailItem(Icons.local_gas_station_outlined, 'Fuel Charges'),
-                _buildTabDetailItem(Icons.person_outline, 'Driver Allowance'),
-                _buildTabDetailItem(Icons.receipt_long_outlined, 'Toll / State tax'),
-              ],
+              children: _buildTabContent(),
             ),
           ),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildTabContent() {
+    switch (_tabController.index) {
+      case 0: // INCLUSIONS
+        return [
+          _buildTabDetailItem(Icons.local_gas_station_outlined, 'Fuel Charges'),
+          _buildTabDetailItem(Icons.person_outline, 'Driver Allowance'),
+          if (!widget.isOneWay) ...[
+            _buildTabDetailItem(Icons.timer_outlined, 'Driving Allowance'),
+            _buildTabDetailItem(Icons.hourglass_empty_outlined, 'Hour Charges'),
+          ],
+        ];
+      case 1: // EXCLUSIONS
+        return [
+          _buildTabDetailItem(Icons.receipt_long_outlined, 'Toll / State tax'),
+          _buildTabDetailItem(Icons.account_balance_wallet_outlined, 'GST (5%)'),
+          _buildTabDetailItem(Icons.local_parking_outlined, 'Parking Charges'),
+        ];
+      case 2: // FACILITIES
+        return [
+          _buildTabDetailItem(Icons.ac_unit, 'Air Conditioner'),
+          _buildTabDetailItem(Icons.luggage, 'Luggage Space'),
+          _buildTabDetailItem(Icons.music_note, 'Music System'),
+        ];
+      case 3: // T&C
+        return [
+          _buildTabDetailItem(Icons.info_outline, 'Night allowance applicable (10 PM - 6 AM)'),
+          _buildTabDetailItem(Icons.speed, 'Extra kms will be charged per km rate'),
+          _buildTabDetailItem(Icons.article_outlined, 'Toll and state tax as per actuals'),
+        ];
+      default:
+        return [];
+    }
   }
 
   Widget _buildTabDetailItem(IconData icon, String text) {

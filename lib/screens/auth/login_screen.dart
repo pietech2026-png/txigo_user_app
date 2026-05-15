@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:country_picker/country_picker.dart';
 import '../home/home_screen.dart';
+import '../../data/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,18 +28,25 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    await Future.delayed(const Duration(seconds: 2));
+    String fullNumber = '+${_selectedCountry.phoneCode}${_phoneController.text}';
+    bool success = await AuthService.login(fullNumber);
 
     if (mounted) {
       setState(() {
         _isLoading = false;
       });
-      String fullNumber = '+${_selectedCountry.phoneCode}${_phoneController.text}';
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen(phoneNumber: fullNumber)),
-        (route) => false,
-      );
+
+      if (success) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen(phoneNumber: fullNumber)),
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login failed. Please try again.')),
+        );
+      }
     }
   }
 

@@ -1,9 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../data/services/auth_service.dart';
+import '../../data/services/settings_service.dart';
+import '../auth/login_screen.dart';
 
-class AccountDetailsScreen extends StatelessWidget {
+class AccountDetailsScreen extends StatefulWidget {
   final String phoneNumber;
   const AccountDetailsScreen({super.key, required this.phoneNumber});
+
+  @override
+  State<AccountDetailsScreen> createState() => _AccountDetailsScreenState();
+}
+
+class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
+  String _userName = 'Loading...';
+  String _email = 'Loading...';
+  String _supportEmail = 'orders@savaari.com';
+  String _supportPhone = '5913506266';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+    _loadSettings();
+  }
+
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userName = prefs.getString('user_name') ?? 'Enter your name';
+      _email = prefs.getString('user_email') ?? 'Enter your email';
+    });
+  }
+
+  Future<void> _loadSettings() async {
+    final email = await SettingsService.getSettingValue('supportEmail');
+    final phone = await SettingsService.getSettingValue('supportPhone');
+    if (mounted) {
+      setState(() {
+        if (email != null) _supportEmail = email;
+        if (phone != null) _supportPhone = phone;
+      });
+    }
+  }
+
+  void _handleLogout() async {
+    await AuthService.logout();
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,11 +97,11 @@ class AccountDetailsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildInputField('NAME', 'Enter your name'),
+                _buildInputField('NAME', _userName),
                 const SizedBox(height: 24),
-                _buildInputField('MOBILE', phoneNumber),
+                _buildInputField('MOBILE', widget.phoneNumber),
                 const SizedBox(height: 24),
-                _buildInputField('EMAIL', 'Enter your email'),
+                _buildInputField('EMAIL', _email),
                 const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
@@ -73,7 +124,7 @@ class AccountDetailsScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     TextButton(
-                      onPressed: () {},
+                      onPressed: _handleLogout,
                       child: Text(
                         'Sign Out',
                         style: GoogleFonts.outfit(color: Colors.blue.shade400, fontWeight: FontWeight.bold),
@@ -111,12 +162,12 @@ class AccountDetailsScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'mail us at orders@savaari.com, or call us at ',
+                        'mail us at $_supportEmail, or call us at ',
                         style: GoogleFonts.outfit(color: Colors.white, fontSize: 11),
                       ),
                       const Icon(Icons.call, color: Colors.white, size: 12),
                       Text(
-                        ' 5913506266.',
+                        ' $_supportPhone.',
                         style: GoogleFonts.outfit(
                           color: Colors.white,
                           fontSize: 11,

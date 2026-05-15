@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../data/services/booking_service.dart';
+import '../../data/models/booking.dart';
 
 class BookingsScreen extends StatefulWidget {
   const BookingsScreen({super.key});
@@ -10,6 +12,32 @@ class BookingsScreen extends StatefulWidget {
 
 class _BookingsScreenState extends State<BookingsScreen> {
   int _selectedTab = 0;
+  List<Booking> _allBookings = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBookings();
+  }
+
+  Future<void> _fetchBookings() async {
+    final bookings = await BookingService.getMyBookings();
+    setState(() {
+      _allBookings = bookings;
+      _isLoading = false;
+    });
+  }
+
+  List<Booking> get _filteredBookings {
+    if (_selectedTab == 0) {
+      return _allBookings.where((b) => b.status == 'Confirmed' || b.status == 'Pending').toList();
+    } else if (_selectedTab == 1) {
+      return _allBookings.where((b) => b.status == 'Confirmed').toList(); // Simplified for demo
+    } else {
+      return _allBookings.where((b) => b.status == 'Completed' || b.status == 'Cancelled').toList();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +100,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 ),
                 const SizedBox(height: 20),
                 Expanded(
-                  child: _selectedTab == 0 ? _buildUpcomingContent() : _buildEmptyState(),
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _filteredBookings.isEmpty
+                          ? _buildEmptyState()
+                          : _buildBookingsList(),
                 ),
               ],
             ),
@@ -82,21 +114,26 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 
-  Widget _buildUpcomingContent() {
-    return ListView(
+  Widget _buildBookingsList() {
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
-      children: [
-        _buildBookingCard(
-          crn: 'CRN984210543',
-          from: 'Delhi (DEL)',
-          to: 'Jaipur (JAI)',
-          date: '15 May, 2026',
-          time: '07:00 AM',
-          status: 'Confirmed',
-          cabType: 'Sedan (Swift Dezire)',
-          price: '₹2,450',
-        ),
-      ],
+      itemCount: _filteredBookings.length,
+      itemBuilder: (context, index) {
+        final booking = _filteredBookings[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: _buildBookingCard(
+            crn: booking.bookingId ?? 'TX000000',
+            from: booking.pickupAddress,
+            to: booking.dropAddress,
+            date: booking.pickupDate,
+            time: booking.pickupTime,
+            status: booking.status ?? 'Pending',
+            cabType: booking.vehicleCategory,
+            price: '₹${booking.fare.toInt()}',
+          ),
+        );
+      },
     );
   }
 
