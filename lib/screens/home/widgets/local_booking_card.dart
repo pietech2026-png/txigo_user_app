@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'date_time_picker.dart';
+import '../../../widgets/city_autocomplete_field.dart';
+import '../../booking/cab_selection_screen.dart';
 
 class LocalBookingCard extends StatefulWidget {
   const LocalBookingCard({super.key});
@@ -10,6 +12,7 @@ class LocalBookingCard extends StatefulWidget {
 }
 
 class _LocalBookingCardState extends State<LocalBookingCard> {
+  final TextEditingController _cityController = TextEditingController();
   int selectedPackageIndex = 1; // 8 hrs / 80 kms by default
   String startDate = 'Mon May 04';
   String startTime = '07:00 AM';
@@ -103,7 +106,12 @@ class _LocalBookingCardState extends State<LocalBookingCard> {
           ),
           const SizedBox(height: 24),
           // City Input
-          _buildLocationInput(Icons.location_on_outlined, 'CITY', 'Enter Pickup Location'),
+          CityAutocompleteField(
+            label: 'CITY',
+            hint: 'Enter Pickup Location',
+            icon: Icons.location_on_outlined,
+            controller: _cityController,
+          ),
           const SizedBox(height: 16),
           // Trip Start Date
           _buildTripDateInput(context, 'TRIP START', startDate, startTime, Icons.calendar_today_outlined),
@@ -113,7 +121,27 @@ class _LocalBookingCardState extends State<LocalBookingCard> {
             width: double.infinity,
             height: 54,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                if (_cityController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter city')),
+                  );
+                  return;
+                }
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CabSelectionScreen(
+                      from: _cityController.text,
+                      to: 'Local (${packages[selectedPackageIndex]['time']})',
+                      date: startDate,
+                      time: startTime,
+                      isOneWay: true,
+                      phoneNumber: '919243424225', // Should probably be passed down
+                    ),
+                  ),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange.shade700,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -133,37 +161,10 @@ class _LocalBookingCardState extends State<LocalBookingCard> {
     );
   }
 
-  Widget _buildLocationInput(IconData icon, String label, String hint) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.02),
-        border: Border.all(color: Colors.blue.shade100),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.grey, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  hint,
-                  style: GoogleFonts.outfit(color: Colors.black54, fontSize: 16, fontWeight: FontWeight.w400),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  @override
+  void dispose() {
+    _cityController.dispose();
+    super.dispose();
   }
 
   Widget _buildTripDateInput(BuildContext context, String label, String date, String subText, IconData icon) {

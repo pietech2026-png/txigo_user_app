@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'booking_review_screen.dart';
 import '../../data/services/car_service.dart';
 import '../../data/models/car_category.dart';
+import '../../data/services/distance_service.dart';
 
 class CabSelectionScreen extends StatefulWidget {
   final String from;
@@ -32,7 +33,10 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
   int _selectedCarIndex = 0;
   late TabController _tabController;
   List<CarCategory> _carCategories = [];
+  Map<String, double> _calculatedPrices = {};
+  Map<String, double> _perKmRates = {};
   bool _isLoading = true;
+  double _distance = 0.0;
 
   @override
   void initState() {
@@ -47,27 +51,50 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
   }
 
   Future<void> _fetchCarCategories() async {
+    setState(() => _isLoading = true);
+    
+    // 1. Calculate distance once
+    _distance = await DistanceService.getDistance(widget.from, widget.to);
+    
+    // 2. Fetch all categories
     final categories = await CarService.getCarCategories();
     
-    // Sort categories based on user preference: Hatchback, SUV (Ertiga), Sedan, Luxury SUV
+    // 3. Fetch prices for each category
+    Map<String, double> prices = {};
+    for (var cat in categories) {
+      final result = await CarService.calculatePrice(
+        rideType: widget.isOneWay ? 'Oneway' : 'Roundtrip',
+        sourceCity: widget.from,
+        destinationCity: widget.to,
+        category: cat.name,
+        distance: _distance,
+        days: 1, // Default to 1 day for now
+      );
+      if (result.containsKey('fare')) {
+        prices[cat.name] = (result['fare'] as num).toDouble();
+        if (result.containsKey('details') && result['details'].containsKey('perKm')) {
+          _perKmRates[cat.name] = (result['details']['perKm'] as num).toDouble();
+        }
+      } else {
+        prices[cat.name] = cat.baseFare; // Fallback
+      }
+    }
+
+    // Sort categories (existing logic)
     final List<String> priorityOrder = ['hatchback', 'ertiga', 'sedan', 'luxury', 'crysta'];
-    
     categories.sort((a, b) {
       String nameA = (a.displayName + a.name).toLowerCase();
       String nameB = (b.displayName + b.name).toLowerCase();
-      
       int indexA = priorityOrder.indexWhere((element) => nameA.contains(element));
       int indexB = priorityOrder.indexWhere((element) => nameB.contains(element));
-      
-      // If not found in priority list, move to the end
       if (indexA == -1) indexA = 99;
       if (indexB == -1) indexB = 99;
-      
       return indexA.compareTo(indexB);
     });
 
     setState(() {
       _carCategories = categories;
+      _calculatedPrices = prices;
       _isLoading = false;
     });
   }
@@ -203,7 +230,7 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '₹ ${car.baseFare.toInt()}',
+                                    '₹ ${(_calculatedPrices[car.name] ?? car.baseFare).toInt()}',
                                     style: GoogleFonts.outfit(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w500,
@@ -325,7 +352,7 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
           ),
           const SizedBox(height: 8),
           Text(
-            '₹ ${car.baseFare.toInt()}',
+            '₹ ${(_calculatedPrices[car.name] ?? car.baseFare).toInt()}',
             style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.blue.shade700),
           ),
           Text(
@@ -339,7 +366,7 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
             _buildInclusionItem(Icons.timer_outlined, 'Driver driving allowance included'),
             _buildInclusionItem(Icons.hourglass_empty_outlined, 'Hour charges included'),
           ],
-          _buildInclusionItem(Icons.info_outline, 'Per Km Rate: ₹ ${car.perKmRate}'),
+          _buildInclusionItem(Icons.info_outline, 'Per Km Rate: ₹ ${_perKmRates[car.name] ?? car.perKmRate}'),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(10),
@@ -375,7 +402,7 @@ class _CabSelectionScreenState extends State<CabSelectionScreen> with SingleTick
                       carName: widget.petType != null
                           ? 'Pet Friendly ${car.displayName} (${widget.petType})'
                           : car.displayName,
-                      price: '₹ ${car.baseFare.toInt()}',
+                      price: '₹ ${(_calculatedPrices[car.name] ?? car.baseFare).toInt()}',
                       phoneNumber: widget.phoneNumber,
                     ),
                   ),

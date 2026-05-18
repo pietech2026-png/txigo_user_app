@@ -131,6 +131,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
             status: booking.status ?? 'Pending',
             cabType: booking.vehicleCategory,
             price: '₹${booking.fare.toInt()}',
+            driverName: booking.driverName,
+            driverNumber: booking.driverNumber,
+            carNo: booking.carNo,
           ),
         );
       },
@@ -169,6 +172,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
     required String status,
     required String cabType,
     required String price,
+    String? driverName,
+    String? driverNumber,
+    String? carNo,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -269,6 +275,35 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ),
                   ],
                 ),
+                if (driverName != null && driverName.isNotEmpty) ...[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Divider(),
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.person, color: Colors.blue.shade700),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(driverName, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
+                            const SizedBox(height: 2),
+                            Text('${driverNumber ?? ''} • ${carNo ?? ''}', style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 20),
                 // Action Buttons
                 Row(

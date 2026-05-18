@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../data/cities.dart';
+import '../data/services/location_service.dart';
+import 'dart:async';
 
 class CityAutocompleteField extends StatefulWidget {
   final String label;
@@ -24,7 +26,8 @@ class _CityAutocompleteFieldState extends State<CityAutocompleteField> {
   final FocusNode _focusNode = FocusNode();
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _overlayEntry;
-  List<City> _suggestions = [];
+  List<Map<String, dynamic>> _suggestions = [];
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -39,28 +42,28 @@ class _CityAutocompleteFieldState extends State<CityAutocompleteField> {
   }
 
   void _updateSuggestions(String query) {
-    if (query.isEmpty) {
-      setState(() => _suggestions = []);
-      _hideOverlay();
-      return;
-    }
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      if (query.isEmpty) {
+        setState(() => _suggestions = []);
+        _hideOverlay();
+        return;
+      }
 
-    final matches = allCities
-        .where((city) =>
-            city.name.toLowerCase().contains(query.toLowerCase()) ||
-            city.state.toLowerCase().contains(query.toLowerCase()))
-        .take(5) // Limit suggestions
-        .toList();
+      final results = await LocationService.searchCities(query);
 
-    setState(() {
-      _suggestions = matches;
+      if (mounted) {
+        setState(() {
+          _suggestions = results;
+        });
+
+        if (_suggestions.isNotEmpty) {
+          _showOverlay();
+        } else {
+          _hideOverlay();
+        }
+      }
     });
-
-    if (_suggestions.isNotEmpty) {
-      _showOverlay();
-    } else {
-      _hideOverlay();
-    }
   }
 
   void _showOverlay() {
@@ -105,10 +108,11 @@ class _CityAutocompleteFieldState extends State<CityAutocompleteField> {
                   return ListTile(
                     dense: true,
                     leading: const Icon(Icons.location_city, size: 18, color: Colors.blue),
-                    title: Text(city.name, style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14)),
-                    subtitle: Text(city.state, style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey)),
+                    title: Text(city['display_name'].split(',')[0], style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14)),
+                    subtitle: Text(city['display_name'], maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey)),
                     onTap: () {
-                      widget.controller.text = city.name;
+                      widget.controller.text = city['display_name'].split(',')[0];
+                      LocationService.saveCityToBackend(city);
                       _focusNode.unfocus();
                       _hideOverlay();
                     },
@@ -124,6 +128,7 @@ class _CityAutocompleteFieldState extends State<CityAutocompleteField> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _focusNode.dispose();
     _hideOverlay();
     super.dispose();

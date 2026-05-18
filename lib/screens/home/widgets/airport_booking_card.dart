@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'date_time_picker.dart';
+import '../../../widgets/city_autocomplete_field.dart';
+import '../../booking/cab_selection_screen.dart';
 
 class AirportBookingCard extends StatefulWidget {
   const AirportBookingCard({super.key});
@@ -10,6 +12,8 @@ class AirportBookingCard extends StatefulWidget {
 }
 
 class _AirportBookingCardState extends State<AirportBookingCard> {
+  final TextEditingController _airportController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
   bool isPickup = true;
   String startDate = 'Sun May 03';
   String startTime = '05:00 PM';
@@ -66,10 +70,20 @@ class _AirportBookingCardState extends State<AirportBookingCard> {
           ),
           const SizedBox(height: 24),
           // Airport Input
-          _buildLocationInput(Icons.location_on_outlined, 'AIRPORT', 'Airport/city name - e.g. Mumbai'),
+          CityAutocompleteField(
+            label: 'AIRPORT',
+            hint: 'Airport/city name - e.g. Mumbai',
+            icon: Icons.location_on_outlined,
+            controller: _airportController,
+          ),
           const SizedBox(height: 12),
           // Address Input
-          _buildLocationInput(Icons.location_on_outlined, isPickup ? 'DROP ADDRESS' : 'PICKUP ADDRESS', 'Enter your address'),
+          CityAutocompleteField(
+            label: isPickup ? 'DROP ADDRESS' : 'PICKUP ADDRESS',
+            hint: 'Enter your address/locality',
+            icon: Icons.location_on_outlined,
+            controller: _addressController,
+          ),
           const SizedBox(height: 16),
           // Trip Start Date
           _buildTripDateInput(context, 'TRIP START', startDate, startTime, Icons.calendar_today_outlined),
@@ -79,7 +93,27 @@ class _AirportBookingCardState extends State<AirportBookingCard> {
             width: double.infinity,
             height: 54,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                if (_airportController.text.isEmpty || _addressController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter both airport and address')),
+                  );
+                  return;
+                }
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CabSelectionScreen(
+                      from: isPickup ? _airportController.text : _addressController.text,
+                      to: isPickup ? _addressController.text : _airportController.text,
+                      date: startDate,
+                      time: startTime,
+                      isOneWay: true,
+                      phoneNumber: '919243424225',
+                    ),
+                  ),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange.shade700,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -134,37 +168,11 @@ class _AirportBookingCardState extends State<AirportBookingCard> {
     );
   }
 
-  Widget _buildLocationInput(IconData icon, String label, String hint) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.02),
-        border: Border.all(color: Colors.blue.shade100),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.grey, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  hint,
-                  style: GoogleFonts.outfit(color: Colors.black54, fontSize: 16, fontWeight: FontWeight.w400),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  @override
+  void dispose() {
+    _airportController.dispose();
+    _addressController.dispose();
+    super.dispose();
   }
 
   Widget _buildTripDateInput(BuildContext context, String label, String date, String subText, IconData icon) {

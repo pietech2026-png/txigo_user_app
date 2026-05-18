@@ -30,6 +30,9 @@ class Booking {
   final double dueFare;
   final String? status;
   final List<TimelineItem> timeline;
+  final String? driverName;
+  final String? driverNumber;
+  final String? carNo;
 
   Booking({
     this.id,
@@ -63,6 +66,9 @@ class Booking {
     this.dueFare = 0,
     this.status,
     this.timeline = const [],
+    this.driverName,
+    this.driverNumber,
+    this.carNo,
   });
 
   Map<String, dynamic> toJson() {
@@ -94,6 +100,9 @@ class Booking {
       'fare': fare,
       'advance': advance,
       'dueFare': dueFare,
+      'driverName': driverName,
+      'driverNumber': driverNumber,
+      'carNo': carNo,
     };
   }
 
@@ -132,6 +141,9 @@ class Booking {
       timeline: (json['timeline'] as List? ?? [])
           .map((item) => TimelineItem.fromJson(item))
           .toList(),
+      driverName: json['driverName'],
+      driverNumber: json['driverNumber'],
+      carNo: json['carNo'],
     );
   }
 }
